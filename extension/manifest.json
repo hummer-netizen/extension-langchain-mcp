@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Research Agent",
+  "version": "1.0",
+  "description": "AI research agent that compares data across web pages",
+  "background": { "service_worker": "background.js" },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "host_permissions": ["https://langchain-mcp.webfuse.it/*"],
+  "env": [
+    { "key": "AGENT_URL", "value": "", "description": "Agent server URL" }
+  ]
+}

@@ -1,0 +1,1 @@
+browser.sidePanel.open();

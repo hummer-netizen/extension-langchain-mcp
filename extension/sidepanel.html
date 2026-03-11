@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0f0f1a; color: #e0e0e0;
+    padding: 16px; min-height: 100vh;
+  }
+  h2 { font-size: 16px; color: #f59e0b; margin-bottom: 4px; }
+  .sub { font-size: 12px; color: #888; margin-bottom: 12px; }
+  textarea {
+    width: 100%; padding: 10px; border-radius: 8px;
+    border: 1px solid #2a2a4a; background: #1a1a2e; color: #e0e0e0;
+    font-size: 13px; resize: vertical; min-height: 60px; font-family: inherit;
+  }
+  textarea:focus { border-color: #f59e0b; outline: none; }
+  #log { margin-top: 12px; max-height: calc(100vh - 220px); overflow-y: auto; }
+  .entry {
+    padding: 8px 12px; margin: 4px 0; border-radius: 8px;
+    font-size: 12px; line-height: 1.5;
+  }
+  .entry.status { background: #1a1a2e; border: 1px solid #2a2a4a; color: #888; }
+  .entry.step { background: #1a1a2e; border: 1px solid #f59e0b44; }
+  .entry.tools { background: #1a2e1a; border: 1px solid #2a4a2a; color: #888; font-size: 11px; }
+  .entry.result { background: #1a2e1a; border: 1px solid #34d399; white-space: pre-wrap; }
+  .entry.done { background: #1a1a2e; border: 1px solid #f59e0b; color: #f59e0b; text-align: center; }
+  button {
+    width: 100%; padding: 10px; border: none; border-radius: 8px;
+    background: #f59e0b; color: #0f0f1a; font-size: 14px; font-weight: 600;
+    cursor: pointer; margin-top: 8px;
+  }
+  button:hover { background: #d97706; }
+  button:disabled { background: #444; color: #888; cursor: not-allowed; }
+  .powered { text-align: center; margin-top: 8px; font-size: 10px; color: #444; }
+  .powered a { color: #f59e0b; text-decoration: none; }
+</style>
+</head>
+<body>
+  <h2>🔬 Research Agent</h2>
+  <p class="sub">Compares data across multiple web pages</p>
+  <textarea id="topic" placeholder="e.g. Compare Amsterdam and Rotterdam: population, area, and top attractions">Compare Amsterdam and Rotterdam: population, area, and top attractions</textarea>
+  <button id="btn" onclick="startResearch()">🔍 Start Research</button>
+  <div id="log"></div>
+  <div class="powered">Powered by <a href="https://webfuse.com">Webfuse</a> + <a href="https://python.langchain.com">LangChain</a></div>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
