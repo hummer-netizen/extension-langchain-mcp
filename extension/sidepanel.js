@@ -108,45 +108,62 @@ async function startResearch() {
       return;
     }
 
-    // Read full response (proxy may buffer/close streaming connections)
-    var fullText = await resp.text();
-    
-    // Parse SSE events
-    var dataLines = fullText.split("data: ").slice(1).map(function(s) { var end = s.indexOf("\n"); return end > 0 ? s.slice(0, end) : s.trim(); });
-    for (var i = 0; i < dataLines.length; i++) {
-      try {
-        var event = JSON.parse(dataLines[i]);
-        switch (event.type) {
-          case "status":
-            addEntry("status", event.text);
-            break;
-          case "step":
-            addEntry("step", "🔧 Step " + event.index + ": " + event.text);
-            break;
-          case "tool_done":
-            addEntry("tool-done", "  ✓ " + event.tool + ": " + (event.preview || "done"));
-            break;
-          case "token":
-            if (!resultEl) {
-              addEntry("result-header", "📊 Results:");
-              resultEl = addEntry("result", "");
-            }
-            resultMd += event.text;
-            break;
-          case "error":
-            addEntry("error", "❌ " + event.text);
-            break;
-          case "done":
-            addEntry("done", "✅ Research complete (" + (event.steps || "?") + " tool calls)");
-            break;
-        }
-      } catch (parseErr) {}
+    // Stream SSE events for real-time updates
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let sseBuffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      sseBuffer += decoder.decode(value, { stream: true });
+
+      // Split on "data: " to handle both newline-delimited and merged responses
+      const parts = sseBuffer.split('data: ');
+      sseBuffer = parts.pop() || '';
+      
+      for (const part of parts) {
+        const trimmed = part.trim();
+        if (!trimmed || trimmed.startsWith(':')) continue;
+        const jsonEnd = trimmed.indexOf('\n');
+        const jsonStr = jsonEnd > 0 ? trimmed.slice(0, jsonEnd) : trimmed;
+        try {
+          const event = JSON.parse(jsonStr);
+          switch (event.type) {
+            case 'status':
+              addEntry('status', event.text);
+              break;
+            case 'step':
+              addEntry('step', `🔧 Step ${event.index}: ${event.text}`);
+              break;
+            case 'tool_done':
+              addEntry('tool-done', `  ✓ ${event.tool}: ${event.preview || 'done'}`);
+              break;
+            case 'token':
+              if (!resultEl) {
+                addEntry('result-header', '📊 Results:');
+                resultEl = addEntry('result', '');
+              }
+              resultMd += event.text;
+              resultEl.innerHTML = mdToHtml(resultMd);
+              logEl.scrollTop = logEl.scrollHeight;
+              break;
+            case 'error':
+              addEntry('error', `❌ ${event.text}`);
+              break;
+            case 'done':
+              addEntry('done', `✅ Research complete (${event.steps || '?'} tool calls)`);
+              break;
+          }
+        } catch (_) {}
+      }
     }
-    
+
     // Final render
     if (resultEl && resultMd) {
       resultEl.innerHTML = mdToHtml(resultMd);
     }
+
   } catch (e) {
     addEntry('error', '❌ ' + e.message);
   }
