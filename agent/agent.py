@@ -80,6 +80,8 @@ async def _mcp_call(tool_name: str, args: dict, rest_key: str, session_id: str =
             if session_id:
                 args["session_id"] = session_id
 
+            logger.info(f"MCP call: {tool_name} args={args}")
+
             resp = await client.post(
                 MCP_URL,
                 json={
@@ -165,13 +167,36 @@ def make_tools(rest_key: str, session_id: str = ""):
         return _truncate_snapshot(result, root)
 
     @tool
-    async def see_accessibility_tree() -> str:
-        """Read the page accessibility tree — a compact overview of all headings, landmarks, links, and interactive elements.
-        ALWAYS call this FIRST on a new page to understand the structure before using see_dom_snapshot.
-        Use the headings and landmarks to find the right CSS selector for the data you need."""
-        result = await _mcp_call("see_accessibilityTree", {}, rest_key, session_id)
-        # Truncate a11y tree too if very large
-        return _truncate_snapshot(result, "accessibility-tree")
+    async def page_overview() -> str:
+        """Get a compact overview of the current page: all section headings (h2, h3) and the infobox if present.
+        ALWAYS call this FIRST on a new page to understand the structure.
+        Use the headings to identify which section contains the data you need,
+        then call see_dom_snapshot with a targeted CSS selector."""
+        parts = []
+        
+        # Try Table of Contents first (compact list of all sections)
+        toc = await _mcp_call("see_domSnapshot", {"options": {"root": "#toc"}}, rest_key, session_id)
+        if toc and "Error" not in toc and len(toc) > 20:
+            parts.append("=== TABLE OF CONTENTS ===\n" + toc)
+        
+        # Try infobox (common on Wikipedia — has key facts)
+        infobox = await _mcp_call("see_domSnapshot", {"options": {"root": ".infobox"}}, rest_key, session_id)
+        if infobox and "Error" not in infobox and len(infobox) > 20:
+            parts.append("=== INFOBOX ===\n" + infobox)
+        
+        # If no TOC found, get a low-quality snapshot of the whole page for structure
+        if not parts:
+            overview = await _mcp_call("see_domSnapshot", {"options": {"root": "body", "quality": 0.1}}, rest_key, session_id)
+            parts.append("=== PAGE OVERVIEW (low detail) ===\n" + overview)
+        
+        result = "\n\n".join(parts)
+        return _truncate_snapshot(result, "page-overview")
+
+    @tool
+    async def see_screenshot() -> str:
+        """Take a screenshot of the current page. Returns a visual overview.
+        Useful when DOM snapshots are too large or when you need to understand page layout."""
+        return await _mcp_call("see_guiSnapshot", {"options": {"quality": 0.3}}, rest_key, session_id)
 
     @tool
     async def act_click(target: str) -> str:
@@ -193,7 +218,7 @@ def make_tools(rest_key: str, session_id: str = ""):
         """Press a keyboard key on a target element (Enter, Tab, Escape, etc.)."""
         return await _mcp_call("act_keyPress", {"target": target, "key": key}, rest_key, session_id)
 
-    return [navigate, see_dom_snapshot, see_accessibility_tree,
+    return [navigate, see_dom_snapshot, page_overview, see_screenshot,
             act_click, act_scroll, act_type, act_key_press]
 
 
@@ -202,10 +227,11 @@ Your job: research a topic by visiting multiple web pages, extracting data, and 
 
 MANDATORY WORKFLOW for each page:
 1. Navigate to the page
-2. Call see_accessibility_tree FIRST — this gives you a compact overview of the page structure
-3. Identify the right CSS selectors from the tree (look for headings, tables, landmarks)
-4. Call see_dom_snapshot with a NARROW selector to get specific data
+2. Call page_overview FIRST — this returns all section headings and the infobox (if any)
+3. Identify which section contains the data you need based on the headings
+4. Call see_dom_snapshot with a NARROW selector to get that specific section
 5. If the snapshot is truncated, use an even narrower selector — never retry with the same one
+6. Use see_screenshot if you need a visual overview of the page layout
 
 SELECTOR STRATEGY (critical for avoiding context overflow):
 - Wikipedia infoboxes: '.infobox' or '.infobox-data'
