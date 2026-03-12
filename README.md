@@ -1,55 +1,100 @@
-# LangChain + Webfuse MCP
+# LangChain/LangGraph + Webfuse MCP — Research Agent
 
-An AI research agent that browses multiple web pages, extracts data, and presents structured comparisons.
+A multi-step research agent that compares data across web pages. Built with [LangGraph](https://langchain-ai.github.io/langgraph/) and [Webfuse MCP](https://webfuse.com).
 
-Built with [LangGraph](https://langchain-ai.github.io/langgraph/) (ReAct agent pattern) + [Webfuse Session MCP](https://dev.webfu.se/session-mcp-server/) for live browser control.
+## What It Does
+
+Enter a research topic. The agent plans its approach, navigates to multiple web pages, extracts data with targeted CSS selectors, and delivers a structured comparison. You watch every step happen live in your browser.
+
+**Example:** "Compare Amsterdam and Rotterdam: population, area, and top attractions"
+
+The agent visits Wikipedia for each city, reads the infoboxes, extracts the numbers, and presents a side-by-side comparison.
 
 ## Quick Start
 
 ```bash
 cd agent
 pip install -r requirements.txt
-OPENAI_API_KEY=sk-... WEBFUSE_REST_KEY=rk_... uvicorn agent:app --port 8082
+cp ../.env.example .env  # Add OPENAI_API_KEY + WEBFUSE_REST_KEY
+uvicorn agent:app --port 8082
 ```
 
-Deploy `extension/` to your Webfuse Space. See [SETUP.md](SETUP.md) for the full guide.
+Deploy `extension/` to your Webfuse Space. Set `AGENT_URL` to your server URL.
 
-## What Makes This Different
-
-The other demos (Claude Desktop, OpenAI, Vercel) work on a single page. This one crosses pages.
-
-"Compare Amsterdam and Rotterdam" — the agent navigates to Amsterdam's Wikipedia page, reads the infobox, then navigates to Rotterdam's page, reads the same data, and writes a structured comparison. Multiple pages, one task, fully autonomous.
+See [SETUP.md](SETUP.md) for the full guide.
 
 ## Architecture
 
 ```
-Extension Sidebar            Agent Server (Python)
+Webfuse Extension (sidebar)     FastAPI Agent Server       Webfuse MCP
 
-  Research topic  --POST-->  /research
-  "Compare X & Y"           
-                             LangGraph ReAct Agent
-  Live updates    <--SSE--   navigate → read → navigate → read
-  (steps + tokens)           → compare → stream result
+  Research topic    →POST→     /research                   
+  Stream events     ←SSE←      LangGraph ReAct agent        
+                                  ↓ tool calls              
+                               navigate() ──────────→   session-mcp.webfu.se
+                               see_dom_snapshot() ──→   13 browser tools
+                               act_click() ─────────→   live browser session
 ```
 
-The agent uses `create_react_agent` from LangGraph with 7 async tool wrappers that call Webfuse MCP over HTTP. Each tool call shows as a step in the sidebar. The final comparison streams token-by-token.
+The agent uses LangGraph's `create_react_agent` with async tool wrappers that call Webfuse MCP tools via Streamable HTTP. Each tool call streams as a progress event to the sidebar UI.
 
-## Example Topics
+## What Makes This Different
+
+Other integration demos show single-page interactions. This one is about **multi-page reasoning**:
+
+- The agent plans which pages to visit
+- Navigates between them, extracting comparable data
+- Uses targeted CSS selectors (`.infobox`, `table.wikitable`) to avoid context overflow
+- Presents a structured comparison with citations
+
+This is the LangChain/LangGraph pattern: chains of reasoning with tool use. Webfuse makes the browser one of those tools.
+
+## Example Research Topics
 
 - "Compare Amsterdam and Rotterdam: population, area, and top attractions"
-- "Compare the pricing pages of Notion and Confluence"
+- "Compare the features of Next.js and Remix"
 - "Research Python vs Rust for web backends: performance, ecosystem, learning curve"
+- "Compare pricing and features of Notion vs Confluence"
 - "Find the tallest buildings in New York and compare them to Dubai"
 
-## Blog Post
+## The 7 Agent Tools
 
-Read the full write-up: [Build a Research Agent That Browses Multiple Pages](blog/draft.md)
+| Tool | MCP Tool | What it does |
+|------|----------|-------------|
+| `navigate` | `navigate` | Go to a URL |
+| `see_dom_snapshot` | `see_domSnapshot` | Read page HTML (with CSS selector scoping) |
+| `see_accessibility_tree` | `see_accessibilityTree` | Read page structure |
+| `act_click` | `act_click` | Click an element |
+| `act_scroll` | `act_scroll` | Scroll the page |
+| `act_type` | `act_type` | Type into form fields |
+| `act_key_press` | `act_keyPress` | Press keyboard keys |
+
+The agent has 7 of the 13 available MCP tools — the ones needed for research workflows. Add more by extending `make_tools()` in `agent.py`.
+
+## Swap the LLM
+
+```python
+# OpenAI (default)
+from langchain_openai import ChatOpenAI
+llm = ChatOpenAI(model="gpt-4o")
+
+# Anthropic
+from langchain_anthropic import ChatAnthropic
+llm = ChatAnthropic(model="claude-sonnet-4-20250514")
+
+# Google
+from langchain_google_genai import ChatGoogleGenerativeAI
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+```
+
+Same Webfuse tools work across all providers.
 
 ## Links
 
-- [Webfuse](https://webfuse.com) — The AI browser actuation platform
+- [Blog Post](blog/draft.md)
+- [Webfuse](https://webfuse.com) — AI browser actuation platform
 - [LangGraph Docs](https://langchain-ai.github.io/langgraph/) — Agent framework
-- [Session MCP Server Docs](https://dev.webfu.se/session-mcp-server/) — Browser tool reference
+- [Session MCP Server Docs](https://dev.webfu.se/session-mcp-server/) — Full tool reference
 
 ## License
 
