@@ -147,6 +147,7 @@ async function startResearch() {
     if (resultEl && resultMd) {
       resultEl.innerHTML = mdToHtml(resultMd);
     }
+  } catch (e) {
     addEntry('error', '❌ ' + e.message);
   }
 
