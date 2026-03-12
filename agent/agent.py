@@ -35,6 +35,9 @@ app.add_middleware(
 
 MCP_URL = "https://session-mcp.webfu.se/mcp"
 
+# Max chars for DOM snapshots before truncation
+MAX_SNAPSHOT_CHARS = 25000
+
 
 # --- MCP tool wrappers ---
 
@@ -42,7 +45,6 @@ async def _mcp_call(tool_name: str, args: dict, rest_key: str, session_id: str =
     """Call a Webfuse MCP tool via Streamable HTTP."""
     async with httpx.AsyncClient(timeout=60) as client:
         try:
-            # Initialize MCP session
             base_headers = {
                 "Authorization": f"Bearer {rest_key}",
                 "Content-Type": "application/json",
@@ -69,18 +71,15 @@ async def _mcp_call(tool_name: str, args: dict, rest_key: str, session_id: str =
             if mcp_sid:
                 base_headers["mcp-session-id"] = mcp_sid
 
-            # Send initialized notification
             await client.post(
                 MCP_URL,
                 json={"jsonrpc": "2.0", "method": "notifications/initialized"},
                 headers=base_headers,
             )
 
-            # Add session_id to all tool args
             if session_id:
                 args["session_id"] = session_id
 
-            # Call the tool
             resp = await client.post(
                 MCP_URL,
                 json={
@@ -92,7 +91,6 @@ async def _mcp_call(tool_name: str, args: dict, rest_key: str, session_id: str =
                 headers=base_headers,
             )
 
-            # Parse SSE response (MCP returns text/event-stream)
             data = None
             resp_text = resp.text
             for line in resp_text.split("\n"):
@@ -102,7 +100,6 @@ async def _mcp_call(tool_name: str, args: dict, rest_key: str, session_id: str =
                     except json.JSONDecodeError:
                         continue
 
-            # Fallback: try parsing entire response as JSON
             if data is None:
                 try:
                     data = resp.json()
@@ -124,6 +121,30 @@ async def _mcp_call(tool_name: str, args: dict, rest_key: str, session_id: str =
             return f"Error: {str(e)}"
 
 
+def _truncate_snapshot(text: str, root: str) -> str:
+    """Truncate large snapshots and append guidance for the agent."""
+    if len(text) <= MAX_SNAPSHOT_CHARS:
+        return text
+
+    truncated = text[:MAX_SNAPSHOT_CHARS]
+    # Try to cut at last complete line
+    last_newline = truncated.rfind('\n')
+    if last_newline > MAX_SNAPSHOT_CHARS * 0.8:
+        truncated = truncated[:last_newline]
+
+    guidance = (
+        f"\n\n--- TRUNCATED ({len(text):,} chars total, showing first {len(truncated):,}) ---\n"
+        f"The snapshot for '{root}' is too large. To get the data you need:\n"
+        f"1. Use see_accessibility_tree to find the right section heading or landmark\n"
+        f"2. Then call see_dom_snapshot with a more specific CSS selector, e.g.:\n"
+        f"   - 'table.wikitable' for data tables\n"
+        f"   - '.infobox' for summary boxes\n"
+        f"   - 'h2 + table' for a table after a specific heading\n"
+        f"   - '#section-name' for a specific section\n"
+    )
+    return truncated + guidance
+
+
 def make_tools(rest_key: str, session_id: str = ""):
     """Create LangChain tool wrappers for Webfuse MCP tools."""
 
@@ -134,35 +155,42 @@ def make_tools(rest_key: str, session_id: str = ""):
 
     @tool
     async def see_dom_snapshot(root: str = "body") -> str:
-        """Read the page DOM. Use a CSS selector for `root` to scope results and avoid huge responses.
-        Good selectors: '.infobox', 'main', 'h1', '#content', 'table.wikitable'.
-        Start narrow (e.g. '.infobox') before trying broader selectors."""
-        return await _mcp_call("see_domSnapshot", {"options": {"root": root, "quality": 1}}, rest_key, session_id)
+        """Read page content scoped by a CSS selector.
+        IMPORTANT: Always start with a NARROW selector to avoid context overflow.
+        Good: '.infobox', 'table.wikitable', '.mw-parser-output > p:first-of-type', '#specific-id'
+        Bad: 'body', 'main', '#content' (these are usually too large)
+        If you're not sure which selector to use, call see_accessibility_tree FIRST."""
+        result = await _mcp_call("see_domSnapshot", {"options": {"root": root}}, rest_key, session_id)
+        return _truncate_snapshot(result, root)
 
     @tool
     async def see_accessibility_tree() -> str:
-        """Read the page accessibility tree. Good for understanding page structure before using CSS selectors."""
-        return await _mcp_call("see_accessibilityTree", {}, rest_key, session_id)
+        """Read the page accessibility tree — a compact overview of all headings, landmarks, links, and interactive elements.
+        ALWAYS call this FIRST on a new page to understand the structure before using see_dom_snapshot.
+        Use the headings and landmarks to find the right CSS selector for the data you need."""
+        result = await _mcp_call("see_accessibilityTree", {}, rest_key, session_id)
+        # Truncate a11y tree too if very large
+        return _truncate_snapshot(result, "accessibility-tree")
 
     @tool
-    async def act_click(selector: str) -> str:
-        """Click an element by CSS selector."""
-        return await _mcp_call("act_click", {"selector": selector}, rest_key, session_id)
+    async def act_click(target: str) -> str:
+        """Click an element by CSS selector or text content."""
+        return await _mcp_call("act_click", {"target": target}, rest_key, session_id)
 
     @tool
-    async def act_scroll(direction: str = "down", amount: int = 3) -> str:
-        """Scroll the page. Direction: 'up' or 'down'. Amount in viewport fractions."""
-        return await _mcp_call("act_scroll", {"direction": direction, "amount": amount}, rest_key, session_id)
+    async def act_scroll(target: str = "html", amount: int = 500) -> str:
+        """Scroll an element by pixel amount. Positive = down, negative = up. Use 'html' for full page."""
+        return await _mcp_call("act_scroll", {"target": target, "amount": amount}, rest_key, session_id)
 
     @tool
-    async def act_type(selector: str, text: str) -> str:
+    async def act_type(target: str, text: str) -> str:
         """Type text into a form field by CSS selector."""
-        return await _mcp_call("act_type", {"selector": selector, "text": text}, rest_key, session_id)
+        return await _mcp_call("act_type", {"target": target, "text": text}, rest_key, session_id)
 
     @tool
-    async def act_key_press(key: str) -> str:
-        """Press a keyboard key (Enter, Tab, Escape, etc.)."""
-        return await _mcp_call("act_keyPress", {"key": key}, rest_key, session_id)
+    async def act_key_press(target: str, key: str) -> str:
+        """Press a keyboard key on a target element (Enter, Tab, Escape, etc.)."""
+        return await _mcp_call("act_keyPress", {"target": target, "key": key}, rest_key, session_id)
 
     return [navigate, see_dom_snapshot, see_accessibility_tree,
             act_click, act_scroll, act_type, act_key_press]
@@ -171,22 +199,25 @@ def make_tools(rest_key: str, session_id: str = ""):
 SYSTEM_PROMPT = """You are a research agent with access to a live browser via Webfuse.
 Your job: research a topic by visiting multiple web pages, extracting data, and comparing findings.
 
-Strategy:
-1. Plan which pages to visit for each subject
-2. Navigate to the first subject's page (Wikipedia is a good starting point)
-3. Use see_dom_snapshot with a FOCUSED CSS selector to read key data
-   - Start narrow: '.infobox', '.mw-parser-output > p:first-of-type', 'table.wikitable'
-   - Only use 'body' as a last resort — large pages will overflow context
-4. Navigate to the next subject's page
-5. Extract the SAME data points for fair comparison
-6. Present a clear, structured comparison with data from both pages
+MANDATORY WORKFLOW for each page:
+1. Navigate to the page
+2. Call see_accessibility_tree FIRST — this gives you a compact overview of the page structure
+3. Identify the right CSS selectors from the tree (look for headings, tables, landmarks)
+4. Call see_dom_snapshot with a NARROW selector to get specific data
+5. If the snapshot is truncated, use an even narrower selector — never retry with the same one
 
-Rules:
+SELECTOR STRATEGY (critical for avoiding context overflow):
+- Wikipedia infoboxes: '.infobox' or '.infobox-data'
+- Wikipedia data tables: 'table.wikitable' (add ':first-of-type' if multiple)
+- Specific sections: find the heading in the a11y tree, then use 'h2#section-id + *' or similar
+- NEVER use 'body', 'main', or '#content' as your first attempt — these overflow on any real page
+
+RESEARCH RULES:
 - Always cite which page each fact came from
 - If data isn't available on a page, say so rather than guessing
-- Use focused CSS selectors — '.infobox' is almost always better than 'body'
 - Navigate between pages rather than trying to open multiple tabs
-- Keep the final comparison well-structured with clear categories"""
+- Present a STRUCTURED comparison with clear categories and data points
+- Format results with markdown tables when comparing structured data"""
 
 
 EXAMPLE_TOPICS = [
@@ -242,20 +273,18 @@ async def research(req: ResearchRequest):
                     step += 1
                     tool_name = event.get("name", "?")
                     tool_input = event.get("data", {}).get("input", {})
-                    # Show what the agent is doing
                     detail = ""
                     if "url" in tool_input:
                         detail = f" → {tool_input['url']}"
                     elif "root" in tool_input:
                         detail = f" → {tool_input['root']}"
-                    elif "selector" in tool_input:
-                        detail = f" → {tool_input['selector']}"
+                    elif "target" in tool_input:
+                        detail = f" → {tool_input['target']}"
                     yield f"data: {json.dumps({'type': 'step', 'index': step, 'text': f'{tool_name}{detail}'})}\n\n"
 
                 elif kind == "on_tool_end":
                     tool_name = event.get("name", "?")
                     output = event.get("data", {}).get("output", "")
-                    # Truncate long outputs in the log
                     preview = str(output)[:100] + "..." if len(str(output)) > 100 else str(output)
                     yield f"data: {json.dumps({'type': 'tool_done', 'index': step, 'tool': tool_name, 'preview': preview})}\n\n"
 
