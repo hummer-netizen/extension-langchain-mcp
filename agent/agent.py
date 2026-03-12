@@ -193,12 +193,6 @@ def make_tools(rest_key: str, session_id: str = ""):
         return _truncate_snapshot(result, "page-overview")
 
     @tool
-    async def see_screenshot() -> str:
-        """Take a screenshot of the current page. Returns a visual overview.
-        Useful when DOM snapshots are too large or when you need to understand page layout."""
-        return await _mcp_call("see_guiSnapshot", {"options": {"quality": 0.3}}, rest_key, session_id)
-
-    @tool
     async def act_click(target: str) -> str:
         """Click an element by CSS selector or text content."""
         return await _mcp_call("act_click", {"target": target}, rest_key, session_id)
@@ -218,7 +212,7 @@ def make_tools(rest_key: str, session_id: str = ""):
         """Press a keyboard key on a target element (Enter, Tab, Escape, etc.)."""
         return await _mcp_call("act_keyPress", {"target": target, "key": key}, rest_key, session_id)
 
-    return [navigate, see_dom_snapshot, page_overview, see_screenshot,
+    return [navigate, see_dom_snapshot, page_overview,
             act_click, act_scroll, act_type, act_key_press]
 
 
@@ -231,7 +225,6 @@ MANDATORY WORKFLOW for each page:
 3. Identify which section contains the data you need based on the headings
 4. Call see_dom_snapshot with a NARROW selector to get that specific section
 5. If the snapshot is truncated, use an even narrower selector — never retry with the same one
-6. Use see_screenshot if you need a visual overview of the page layout
 
 SELECTOR STRATEGY (critical for avoiding context overflow):
 - Wikipedia infoboxes: '.infobox' or '.infobox-data'
