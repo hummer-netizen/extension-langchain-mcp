@@ -205,17 +205,6 @@ def truncate(text, label):
     return text[:MAX_CHARS] + f"\n[Truncated. Use a narrower selector than '{label}'.]"
 ```
 
-**Sanitize CSS selectors.** LLMs love pseudo-selectors (`:nth-child`, `:first-of-type`). The Webfuse CSS parser doesn't support them. Strip them before they hit the MCP server:
-
-```python
-import re
-
-def sanitize_selector(selector):
-    s = re.sub(r':{1,2}[a-zA-Z-]+(\([^)]*\))?', '', selector)  # :pseudo
-    s = re.sub(r'\s*[~+]\s*', ' ', s)  # sibling combinators
-    return s.strip() or 'body'
-```
-
 **Disable parallel tool calls.** Your agent controls one browser tab. Parallel `navigate` calls will cancel each other. Force sequential execution:
 
 ```python
