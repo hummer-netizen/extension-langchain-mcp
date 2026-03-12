@@ -43,6 +43,13 @@ async def _mcp_call(tool_name: str, args: dict, rest_key: str, session_id: str =
     async with httpx.AsyncClient(timeout=60) as client:
         try:
             # Initialize MCP session
+            base_headers = {
+                "Authorization": f"Bearer {rest_key}",
+                "Content-Type": "application/json",
+                "Accept": "application/json, text/event-stream",
+            }
+
+            # Initialize MCP session
             init_resp = await client.post(
                 MCP_URL,
                 json={
@@ -55,31 +62,18 @@ async def _mcp_call(tool_name: str, args: dict, rest_key: str, session_id: str =
                         "clientInfo": {"name": "langchain-research-agent", "version": "1.0"},
                     },
                 },
-                headers={
-                    "Authorization": f"Bearer {rest_key}",
-                    "Content-Type": "application/json",
-                    "Accept": "application/json, text/event-stream",
-                },
+                headers=base_headers,
             )
 
-            # Extract session ID from response header
-            session_id = init_resp.headers.get("mcp-session-id", "")
-            headers = {
-                "Authorization": f"Bearer {rest_key}",
-                "Content-Type": "application/json",
-                "Accept": "application/json, text/event-stream",
-            }
-            if session_id:
-                headers["mcp-session-id"] = session_id
+            mcp_sid = init_resp.headers.get("mcp-session-id", "")
+            if mcp_sid:
+                base_headers["mcp-session-id"] = mcp_sid
 
             # Send initialized notification
             await client.post(
                 MCP_URL,
-                json={
-                    "jsonrpc": "2.0",
-                    "method": "notifications/initialized",
-                },
-                headers=headers,
+                json={"jsonrpc": "2.0", "method": "notifications/initialized"},
+                headers=base_headers,
             )
 
             # Add session_id to all tool args
@@ -95,17 +89,32 @@ async def _mcp_call(tool_name: str, args: dict, rest_key: str, session_id: str =
                     "method": "tools/call",
                     "params": {"name": tool_name, "arguments": args},
                 },
-                headers=headers,
+                headers=base_headers,
             )
 
-            data = resp.json()
+            # Parse SSE response (MCP returns text/event-stream)
+            data = None
+            resp_text = resp.text
+            for line in resp_text.split("\n"):
+                if line.startswith("data:"):
+                    try:
+                        data = json.loads(line[5:].strip())
+                    except json.JSONDecodeError:
+                        continue
+
+            # Fallback: try parsing entire response as JSON
+            if data is None:
+                try:
+                    data = resp.json()
+                except:
+                    return f"Error: Could not parse MCP response: {resp_text[:200]}"
 
             if "error" in data:
                 return f"Error: {data['error'].get('message', 'unknown error')}"
 
             result = data.get("result", {})
-            content = result.get("content", [])
-            texts = [c.get("text", "") for c in content if c.get("type") == "text"]
+            content_items = result.get("content", [])
+            texts = [c.get("text", "") for c in content_items if c.get("type") == "text"]
             return "\n".join(texts) if texts else json.dumps(result)
 
         except httpx.TimeoutException:
