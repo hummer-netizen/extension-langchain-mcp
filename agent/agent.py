@@ -157,8 +157,9 @@ def make_tools(rest_key: str, session_id: str = ""):
     async def see_dom_snapshot(root: str = "body") -> str:
         """Read page content scoped by a CSS selector.
         IMPORTANT: Always start with a NARROW selector to avoid context overflow.
-        Good: '.infobox', 'table.wikitable', '.mw-parser-output > p:first-of-type', '#specific-id'
+        Good: '.infobox', 'table.wikitable', '#specific-id', '.some-class'
         Bad: 'body', 'main', '#content' (these are usually too large)
+        NOT supported: pseudo-selectors like :first-of-type, :nth-child, :contains
         If you're not sure which selector to use, call see_accessibility_tree FIRST."""
         result = await _mcp_call("see_domSnapshot", {"options": {"root": root}}, rest_key, session_id)
         return _truncate_snapshot(result, root)
@@ -208,9 +209,10 @@ MANDATORY WORKFLOW for each page:
 
 SELECTOR STRATEGY (critical for avoiding context overflow):
 - Wikipedia infoboxes: '.infobox' or '.infobox-data'
-- Wikipedia data tables: 'table.wikitable' (add ':first-of-type' if multiple)
-- Specific sections: find the heading in the a11y tree, then use 'h2#section-id + *' or similar
+- Wikipedia data tables: 'table.wikitable'
+- Specific sections: find the heading ID in the a11y tree, then use '#section-id' or nearby elements
 - NEVER use 'body', 'main', or '#content' as your first attempt — these overflow on any real page
+- DO NOT use CSS pseudo-selectors (:first-of-type, :nth-child, :contains, etc.) — they are not supported
 
 RESEARCH RULES:
 - Always cite which page each fact came from
