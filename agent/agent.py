@@ -129,12 +129,22 @@ def _truncate(text: str, label: str) -> str:
     )
 
 
+import re as _re
+
+def _sanitize_selector(selector: str) -> str:
+    """Strip CSS features unsupported by Webfuse: pseudo-selectors and sibling combinators."""
+    s = _re.sub(r':{1,2}[a-zA-Z-]+(\([^)]*\))?', '', selector)
+    s = _re.sub(r'\s*[~+]\s*', ' ', s)
+    return s.strip() or 'body'
+
+
 def make_tools(mcp: MCPSession):
 
     @tool
     async def navigate(url: str) -> str:
         """Navigate the browser to a URL."""
         return await mcp.call("navigate", {"url": url})
+
 
     @tool
     async def page_overview() -> str:
@@ -151,6 +161,7 @@ def make_tools(mcp: MCPSession):
         """Read page content scoped by a CSS selector.
         Always use a NARROW selector: '.infobox', 'table.wikitable', '#section-id'
         DO NOT use 'body' or 'main' — they overflow. No pseudo-selectors (:first-of-type etc)."""
+        root = _sanitize_selector(root)
         result = await mcp.call("see_domSnapshot", {"options": {"root": root}})
         return _truncate(result, root)
 
