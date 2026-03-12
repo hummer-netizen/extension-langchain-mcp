@@ -33,7 +33,38 @@
   .entry.step { background: #1a1a2e; border-left: 3px solid #f59e0b; color: #e0e0e0; }
   .entry.tool-done { background: transparent; color: #666; font-size: 11px; padding: 2px 10px; }
   .entry.result-header { color: #f59e0b; font-weight: 600; margin-top: 8px; }
-  .entry.result { background: #0d1f0d; border: 1px solid #34d399; white-space: pre-wrap; padding: 12px; }
+  .entry.result {
+    background: linear-gradient(135deg, #2e1f0a, #1f1505);
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .entry.result h1, .entry.result h2, .entry.result h3 {
+    color: #f59e0b; margin: 10px 0 6px 0; font-size: 14px;
+  }
+  .entry.result h1:first-child, .entry.result h2:first-child, .entry.result h3:first-child {
+    margin-top: 0;
+  }
+  .entry.result p { margin: 6px 0; }
+  .entry.result strong { color: #fbbf24; }
+  .entry.result ul, .entry.result ol { padding-left: 18px; margin: 6px 0; }
+  .entry.result li { margin: 2px 0; }
+  .entry.result table {
+    width: 100%; border-collapse: collapse; margin: 8px 0;
+    font-size: 12px;
+  }
+  .entry.result th {
+    background: rgba(245, 158, 11, 0.2); color: #f59e0b;
+    padding: 6px 8px; text-align: left;
+    border-bottom: 2px solid #f59e0b;
+  }
+  .entry.result td {
+    padding: 5px 8px;
+    border-bottom: 1px solid rgba(245, 158, 11, 0.15);
+  }
+  .entry.result tr:hover td { background: rgba(245, 158, 11, 0.05); }
   .entry.error { background: #2e1a1a; border: 1px solid #ef4444; color: #ef4444; }
   .entry.done { background: #1a1a2e; border: 1px solid #f59e0b; color: #f59e0b; text-align: center; }
   button#btn {
@@ -43,8 +74,9 @@
   }
   button#btn:hover { background: #d97706; }
   button#btn:disabled { background: #444; color: #888; cursor: not-allowed; }
-  .powered { text-align: center; margin-top: 8px; font-size: 10px; color: #444; }
-  .powered a { color: #f59e0b; text-decoration: none; }
+  .footer { text-align: center; margin-top: 12px; font-size: 10px; color: #555; }
+  .footer a { color: #f59e0b; text-decoration: none; cursor: pointer; }
+  .footer a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -54,7 +86,12 @@
   <div id="examples"></div>
   <button id="btn" onclick="startResearch()">🔍 Start Research</button>
   <div id="log"></div>
-  <div class="powered">Powered by <a href="https://webfuse.com">Webfuse</a> + <a href="https://python.langchain.com">LangChain</a></div>
+  <div class="footer">
+    Powered by
+    <a data-href="https://webfuse.com">Webfuse</a> +
+    <a data-href="https://python.langchain.com">LangChain</a>
+    · <a data-href="https://github.com/hummer-netizen/extension-langchain-mcp">GitHub</a>
+  </div>
   <script src="sidepanel.js"></script>
 </body>
 </html>

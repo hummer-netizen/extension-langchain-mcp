@@ -4,6 +4,55 @@ const btn = document.getElementById('btn');
 const topicEl = document.getElementById('topic');
 const examplesEl = document.getElementById('examples');
 
+// Open external links via window.open to bypass CSP
+document.querySelectorAll('a[data-href]').forEach(a => {
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.open(a.dataset.href, '_blank');
+  });
+});
+
+// Simple markdown to HTML renderer
+function mdToHtml(md) {
+  // Tables
+  md = md.replace(/^(\|.+\|)\n(\|[\s:|-]+\|)\n((?:\|.+\|\n?)+)/gm, (_, header, sep, rows) => {
+    const ths = header.split('|').filter(c => c.trim()).map(c => `<th>${c.trim()}</th>`).join('');
+    const trs = rows.trim().split('\n').map(row => {
+      const tds = row.split('|').filter(c => c.trim()).map(c => `<td>${c.trim()}</td>`).join('');
+      return `<tr>${tds}</tr>`;
+    }).join('');
+    return `<table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>`;
+  });
+
+  // Headers
+  md = md.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  md = md.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  md = md.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+  // Bold
+  md = md.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+  // Unordered lists
+  md = md.replace(/^((?:- .+\n?)+)/gm, (match) => {
+    const items = match.trim().split('\n').map(l => `<li>${l.replace(/^- /, '')}</li>`).join('');
+    return `<ul>${items}</ul>`;
+  });
+
+  // Ordered lists
+  md = md.replace(/^((?:\d+\. .+\n?)+)/gm, (match) => {
+    const items = match.trim().split('\n').map(l => `<li>${l.replace(/^\d+\. /, '')}</li>`).join('');
+    return `<ol>${items}</ol>`;
+  });
+
+  // Paragraphs (lines not already wrapped)
+  md = md.replace(/^(?!<[a-z])((?!$).+)$/gm, '<p>$1</p>');
+
+  // Clean up empty paragraphs
+  md = md.replace(/<p>\s*<\/p>/g, '');
+
+  return md;
+}
+
 function addEntry(cls, text) {
   const el = document.createElement('div');
   el.className = `entry ${cls}`;
@@ -27,9 +76,7 @@ async function loadExamples() {
         examplesEl.appendChild(btn);
       });
     }
-  } catch (_) {
-    // Agent server might not be running yet
-  }
+  } catch (_) {}
 }
 
 async function startResearch() {
@@ -46,6 +93,7 @@ async function startResearch() {
   }
 
   let resultEl = null;
+  let resultMd = '';
 
   try {
     const resp = await fetch(`${AGENT_URL}/research`, {
@@ -89,7 +137,8 @@ async function startResearch() {
                 addEntry('result-header', '📊 Results:');
                 resultEl = addEntry('result', '');
               }
-              resultEl.textContent += event.text;
+              resultMd += event.text;
+              resultEl.innerHTML = mdToHtml(resultMd);
               logEl.scrollTop = logEl.scrollHeight;
               break;
             case 'error':
@@ -101,6 +150,11 @@ async function startResearch() {
           }
         } catch {}
       }
+    }
+
+    // Final render to catch any remaining markdown
+    if (resultEl && resultMd) {
+      resultEl.innerHTML = mdToHtml(resultMd);
     }
   } catch (e) {
     addEntry('error', '❌ ' + e.message);
