@@ -1,4 +1,4 @@
-const AGENT_URL = browser.webfuseSession.env.AGENT_URL || 'http://localhost:8082';
+const AGENT_URL = browser.webfuseSession.env.AGENT_URL || 'https://langchain-mcp.webfuse.it';
 const logEl = document.getElementById('log');
 const btn = document.getElementById('btn');
 const topicEl = document.getElementById('topic');
