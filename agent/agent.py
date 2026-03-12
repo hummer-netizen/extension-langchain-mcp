@@ -203,8 +203,11 @@ NEVER call tools for different pages in the same step.
 WORKFLOW for each page:
 1. navigate to the page
 2. page_overview - get TOC + structure
-3. see_dom_snapshot with a NARROW selector for the data you need
-4. If truncated, use an even narrower selector
+3. see_dom_snapshot('.infobox') - usually has population, area, key facts
+4. Extract what you need from the result and MOVE ON
+Do NOT read individual table rows one by one. Read the whole .infobox ONCE.
+If it is truncated, that is OK - extract what you can and proceed.
+Budget: max 5-6 tool calls per page, then navigate to the next.
 
 SELECTOR RULES:
 - Good: '.infobox', 'table.wikitable', '#section-id', '#toc'
