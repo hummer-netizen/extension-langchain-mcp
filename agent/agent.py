@@ -137,7 +137,7 @@ def make_tools(rest_key: str, session_id: str = ""):
         """Read the page DOM. Use a CSS selector for `root` to scope results and avoid huge responses.
         Good selectors: '.infobox', 'main', 'h1', '#content', 'table.wikitable'.
         Start narrow (e.g. '.infobox') before trying broader selectors."""
-        return await _mcp_call("see_domSnapshot", {"root": root}, rest_key, session_id)
+        return await _mcp_call("see_domSnapshot", {"options": {"root": root, "quality": 1}}, rest_key, session_id)
 
     @tool
     async def see_accessibility_tree() -> str:
