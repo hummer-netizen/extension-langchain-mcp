@@ -1,0 +1,7 @@
+name = "langchain-mcp-proxy"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+routes = [
+  { pattern = "langchain-mcp.webfuse.it", custom_domain = true }
+]

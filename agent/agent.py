@@ -38,7 +38,7 @@ MCP_URL = "https://session-mcp.webfu.se/mcp"
 
 # --- MCP tool wrappers ---
 
-async def _mcp_call(tool_name: str, args: dict, rest_key: str) -> str:
+async def _mcp_call(tool_name: str, args: dict, rest_key: str, session_id: str = "") -> str:
     """Call a Webfuse MCP tool via Streamable HTTP."""
     async with httpx.AsyncClient(timeout=60) as client:
         try:
@@ -82,6 +82,10 @@ async def _mcp_call(tool_name: str, args: dict, rest_key: str) -> str:
                 headers=headers,
             )
 
+            # Add session_id to all tool args
+            if session_id:
+                args["session_id"] = session_id
+
             # Call the tool
             resp = await client.post(
                 MCP_URL,
@@ -111,45 +115,45 @@ async def _mcp_call(tool_name: str, args: dict, rest_key: str) -> str:
             return f"Error: {str(e)}"
 
 
-def make_tools(rest_key: str):
+def make_tools(rest_key: str, session_id: str = ""):
     """Create LangChain tool wrappers for Webfuse MCP tools."""
 
     @tool
     async def navigate(url: str) -> str:
         """Navigate the browser to a URL. Use for visiting pages to research."""
-        return await _mcp_call("navigate", {"url": url}, rest_key)
+        return await _mcp_call("navigate", {"url": url}, rest_key, session_id)
 
     @tool
     async def see_dom_snapshot(root: str = "body") -> str:
         """Read the page DOM. Use a CSS selector for `root` to scope results and avoid huge responses.
         Good selectors: '.infobox', 'main', 'h1', '#content', 'table.wikitable'.
         Start narrow (e.g. '.infobox') before trying broader selectors."""
-        return await _mcp_call("see_domSnapshot", {"root": root}, rest_key)
+        return await _mcp_call("see_domSnapshot", {"root": root}, rest_key, session_id)
 
     @tool
     async def see_accessibility_tree() -> str:
         """Read the page accessibility tree. Good for understanding page structure before using CSS selectors."""
-        return await _mcp_call("see_accessibilityTree", {}, rest_key)
+        return await _mcp_call("see_accessibilityTree", {}, rest_key, session_id)
 
     @tool
     async def act_click(selector: str) -> str:
         """Click an element by CSS selector."""
-        return await _mcp_call("act_click", {"selector": selector}, rest_key)
+        return await _mcp_call("act_click", {"selector": selector}, rest_key, session_id)
 
     @tool
     async def act_scroll(direction: str = "down", amount: int = 3) -> str:
         """Scroll the page. Direction: 'up' or 'down'. Amount in viewport fractions."""
-        return await _mcp_call("act_scroll", {"direction": direction, "amount": amount}, rest_key)
+        return await _mcp_call("act_scroll", {"direction": direction, "amount": amount}, rest_key, session_id)
 
     @tool
     async def act_type(selector: str, text: str) -> str:
         """Type text into a form field by CSS selector."""
-        return await _mcp_call("act_type", {"selector": selector, "text": text}, rest_key)
+        return await _mcp_call("act_type", {"selector": selector, "text": text}, rest_key, session_id)
 
     @tool
     async def act_key_press(key: str) -> str:
         """Press a keyboard key (Enter, Tab, Escape, etc.)."""
-        return await _mcp_call("act_keyPress", {"key": key}, rest_key)
+        return await _mcp_call("act_keyPress", {"key": key}, rest_key, session_id)
 
     return [navigate, see_dom_snapshot, see_accessibility_tree,
             act_click, act_scroll, act_type, act_key_press]
@@ -208,7 +212,7 @@ async def research(req: ResearchRequest):
         yield f"data: {json.dumps({'type': 'status', 'text': 'Setting up research agent...'})}\n\n"
 
         llm = ChatOpenAI(model="gpt-4o", temperature=0, max_tokens=4096)
-        tools = make_tools(rest_key)
+        tools = make_tools(rest_key, req.session_id)
         agent = create_react_agent(llm, tools)
 
         yield f"data: {json.dumps({'type': 'status', 'text': f'Researching: {req.topic}'})}\n\n"
