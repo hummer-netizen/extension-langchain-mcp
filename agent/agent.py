@@ -192,22 +192,31 @@ def make_tools(mcp: MCPSession):
 SYSTEM_PROMPT = """You are a research agent with a live browser via Webfuse.
 Research topics by visiting pages, extracting data, and comparing findings.
 
+CRITICAL: You control ONE browser tab. All tools act on the CURRENT page only.
+When comparing multiple subjects, research them ONE AT A TIME:
+  1. Navigate to page A, read all needed data, note the facts
+  2. Navigate to page B, read all needed data, note the facts
+  3. Write your comparison from the collected facts
+NEVER call navigate twice in parallel - the second call cancels the first.
+NEVER call tools for different pages in the same step.
+
 WORKFLOW for each page:
 1. navigate to the page
-2. page_overview — get TOC + structure (one fast call)
+2. page_overview - get TOC + structure
 3. see_dom_snapshot with a NARROW selector for the data you need
 4. If truncated, use an even narrower selector
 
 SELECTOR RULES:
-- Good: '.infobox', 'table.wikitable', '#section-id'
-- Bad: 'body', 'main' (too large)
-- No pseudo-selectors (:first-of-type, :nth-child) — not supported
+- Good: '.infobox', 'table.wikitable', '#section-id', '#toc'
+- Bad: 'body', 'main' (too large, will be truncated)
+- No pseudo-selectors (:first-of-type, :nth-child) - not supported
+- No sibling combinators (~ +) - not supported
 
 OUTPUT:
 - Cite which page each fact came from
 - Use markdown tables for comparisons
-- Sort ranked tables by the relevant metric (height, population, etc.) descending
-- If data isn't available, say so — don't guess"""
+- Sort ranked tables by the relevant metric descending
+- If data is not available, say so"""
 
 
 EXAMPLE_TOPICS = [
@@ -243,7 +252,7 @@ async def research(req: ResearchRequest):
         try:
             yield f"data: {json.dumps({'type': 'status', 'text': 'Setting up research agent...'})}\n\n"
 
-            llm = ChatOpenAI(model="gpt-4o", temperature=0, max_tokens=4096)
+            llm = ChatOpenAI(model="gpt-4o", temperature=0, max_tokens=4096, model_kwargs={"parallel_tool_calls": False})
             tools = make_tools(mcp)
             agent = create_react_agent(llm, tools)
 
