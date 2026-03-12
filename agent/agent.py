@@ -217,7 +217,8 @@ RESEARCH RULES:
 - If data isn't available on a page, say so rather than guessing
 - Navigate between pages rather than trying to open multiple tabs
 - Present a STRUCTURED comparison with clear categories and data points
-- Format results with markdown tables when comparing structured data"""
+- Format results with markdown tables when comparing structured data
+- When ranking or comparing items with a "Rank" column, ALWAYS sort the table by the most relevant numeric metric (height, population, revenue, etc.) in descending order. The rank should reflect the actual sorted order."""
 
 
 EXAMPLE_TOPICS = [
