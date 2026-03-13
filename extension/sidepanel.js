@@ -58,7 +58,7 @@ function addEntry(cls, text) {
   el.className = `entry ${cls}`;
   el.textContent = text;
   logEl.appendChild(el);
-  logEl.scrollTop = logEl.scrollHeight;
+  requestAnimationFrame(() => { logEl.scrollTop = logEl.scrollHeight; });
   return el;
 }
 
@@ -146,7 +146,7 @@ async function startResearch() {
               }
               resultMd += event.text;
               resultEl.innerHTML = mdToHtml(resultMd);
-              logEl.scrollTop = logEl.scrollHeight;
+              requestAnimationFrame(() => { logEl.scrollTop = logEl.scrollHeight; });
               break;
             case 'error':
               addEntry('error', `❌ ${event.text}`);
