@@ -96,6 +96,16 @@ Same Webfuse tools work across all providers.
 - [LangGraph Docs](https://langchain-ai.github.io/langgraph/) — Agent framework
 - [Session MCP Server Docs](https://dev.webfu.se/session-mcp-server/) — Full tool reference
 
+
+## Other Integrations
+
+Webfuse MCP works with any framework. See the other demos:
+
+- **[OpenAI Agents SDK](https://github.com/hummer-netizen/extension-openai-agents-mcp)** — Build a custom agent with the OpenAI Agents SDK
+- **[Claude Desktop / Cursor / VS Code](https://github.com/hummer-netizen/extension-claude-mcp)** — Zero-code setup — just a config file
+- **[Vercel AI SDK](https://github.com/hummer-netizen/extension-vercel-ai-mcp)** — TypeScript browsing assistant for Next.js
+- **[LiveKit Voice Agent](https://github.com/hummer-netizen/extension-livekit-mcp)** — Voice-controlled browser agent with WebRTC
+
 ## License
 
 MIT
