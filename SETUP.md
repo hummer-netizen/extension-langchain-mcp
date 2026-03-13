@@ -29,6 +29,8 @@ cd agent
 uvicorn agent:app --port 8082
 ```
 
+> **Note:** `uvicorn` doesn't auto-load `.env` files. Either export variables first (step 2) or add `python-dotenv` to your code. If you use a `.env` file, load it with: `export $(grep -v '^#' .env | grep -v '^$' | xargs) && uvicorn agent:app --port 8082`
+
 Test it:
 ```bash
 curl http://localhost:8082/health
