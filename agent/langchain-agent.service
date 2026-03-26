@@ -1,0 +1,15 @@
+[Unit]
+Description=LangChain MCP Research Agent
+After=network.target
+
+[Service]
+Type=simple
+User=deploy
+WorkingDirectory=/home/deploy/projects/extension-langchain-mcp/agent
+Environment=PATH=/home/deploy/projects/extension-langchain-mcp/agent/venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/deploy/projects/extension-langchain-mcp/agent/venv/bin/uvicorn agent:app --host 0.0.0.0 --port 8001
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
