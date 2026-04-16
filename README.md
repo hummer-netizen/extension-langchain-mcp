@@ -1,4 +1,4 @@
-# LangChain/LangGraph + Webfuse MCP — Research Agent
+# LangChain/LangGraph + Webfuse MCP, Research Agent
 
 A multi-step research agent that compares data across web pages. Built with [LangGraph](https://langchain-ai.github.io/langgraph/) and [Webfuse MCP](https://webfuse.com).
 
@@ -69,7 +69,7 @@ This is the LangChain/LangGraph pattern: chains of reasoning with tool use. Webf
 | `act_type` | `act_type` | Type into form fields |
 | `act_key_press` | `act_keyPress` | Press keyboard keys |
 
-The agent has 7 of the 13 available MCP tools — the ones needed for research workflows. Add more by extending `make_tools()` in `agent.py`.
+The agent has 7 of the 13 available MCP tools, the ones needed for research workflows. Add more by extending `make_tools()` in `agent.py`.
 
 ## Swap the LLM
 
@@ -92,19 +92,23 @@ Same Webfuse tools work across all providers.
 ## Links
 
 - [Blog Post](blog/draft.md)
-- [Webfuse](https://webfuse.com) — AI browser actuation platform
-- [LangGraph Docs](https://langchain-ai.github.io/langgraph/) — Agent framework
-- [Session MCP Server Docs](https://dev.webfu.se/session-mcp-server/) — Full tool reference
+- [Webfuse](https://webfuse.com), AI browser actuation platform
+- [LangGraph Docs](https://langchain-ai.github.io/langgraph/), Agent framework
+- [Session MCP Server Docs](https://dev.webfu.se/session-mcp-server/), Full tool reference
 
 
-## Other Integrations
 
-Webfuse MCP works with any framework. See the other demos:
+## Other Webfuse Integrations
 
-- **[OpenAI Agents SDK](https://github.com/hummer-netizen/extension-openai-agents-mcp)** — Build a custom agent with the OpenAI Agents SDK
-- **[Claude Desktop / Cursor / VS Code](https://github.com/hummer-netizen/extension-claude-mcp)** — Zero-code setup — just a config file
-- **[Vercel AI SDK](https://github.com/hummer-netizen/extension-vercel-ai-mcp)** — TypeScript browsing assistant for Next.js
-- **[LiveKit Voice Agent](https://github.com/hummer-netizen/extension-livekit-mcp)** — Voice-controlled browser agent with WebRTC
+Webfuse MCP works with any AI framework:
+
+- **[OpenAI Agents SDK](https://github.com/webfuse-com/extension-openai-agents-mcp)** - Python agent with browser control
+- **[Claude Desktop / Cursor / VS Code](https://github.com/webfuse-com/extension-claude-mcp)** - Zero-code MCP config
+- **[LangChain / LangGraph](https://github.com/webfuse-com/extension-langchain-mcp)** - Multi-page research agent
+- **[Vercel AI SDK](https://github.com/webfuse-com/extension-vercel-ai-mcp)** - Next.js browsing assistant
+- **[LiveKit Voice Agent](https://github.com/webfuse-com/extension-livekit-mcp)** - Voice-controlled browser
+- **[ChatGPT GPT](https://github.com/webfuse-com/chatgpt-webfuse-mcp)** - Custom GPT with browser tools
+- **[WebMCP Demo](https://github.com/webfuse-com/webfuse-webmcp-demo)** - Semantic tools on any website
 
 ## License
 
