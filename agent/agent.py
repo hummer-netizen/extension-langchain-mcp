@@ -150,10 +150,10 @@ def make_tools(mcp: MCPSession):
     async def page_overview() -> str:
         """Get a compact overview of the current page: table of contents + infobox.
         ALWAYS call this FIRST on a new page before reading specific content."""
-        toc = await mcp.call("see_domSnapshot", {"options": {"root": "#toc"}})
+        toc = await mcp.call("see.domSnapshot", {"options": {"root": "#toc"}})
         if not toc or "Error" in toc or len(toc) < 30:
             # No TOC — fall back to low-quality body overview
-            toc = await mcp.call("see_domSnapshot", {"options": {"root": "body", "quality": 0.1}})
+            toc = await mcp.call("see.domSnapshot", {"options": {"root": "body", "quality": 0.1}})
         return _truncate(toc, "page-overview")
 
     @tool
@@ -162,28 +162,28 @@ def make_tools(mcp: MCPSession):
         Always use a NARROW selector: '.infobox', 'table.wikitable', '#section-id'
         DO NOT use 'body' or 'main' — they overflow. No pseudo-selectors (:first-of-type etc)."""
         root = _sanitize_selector(root)
-        result = await mcp.call("see_domSnapshot", {"options": {"root": root}})
+        result = await mcp.call("see.domSnapshot", {"options": {"root": root}})
         return _truncate(result, root)
 
     @tool
     async def act_click(target: str) -> str:
         """Click an element by CSS selector."""
-        return await mcp.call("act_click", {"target": target})
+        return await mcp.call("act.click", {"target": target})
 
     @tool
     async def act_scroll(target: str = "html", amount: int = 500) -> str:
         """Scroll by pixels. Positive=down, negative=up. Use 'html' for full page."""
-        return await mcp.call("act_scroll", {"target": target, "amount": amount})
+        return await mcp.call("act.scroll", {"target": target, "amount": amount})
 
     @tool
     async def act_type(target: str, text: str) -> str:
         """Type text into a form field."""
-        return await mcp.call("act_type", {"target": target, "text": text})
+        return await mcp.call("act.type", {"target": target, "text": text})
 
     @tool
     async def act_key_press(target: str, key: str) -> str:
         """Press a key (Enter, Tab, Escape, etc.)."""
-        return await mcp.call("act_keyPress", {"target": target, "key": key})
+        return await mcp.call("act.keyPress", {"target": target, "key": key})
 
     return [navigate, page_overview, see_dom_snapshot,
             act_click, act_scroll, act_type, act_key_press]
