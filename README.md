@@ -10,6 +10,13 @@ Enter a research topic. The agent plans its approach, navigates to multiple web 
 
 The agent visits Wikipedia for each city, reads the infoboxes, extracts the numbers, and presents a side-by-side comparison.
 
+## Prerequisites
+
+- Python 3.10+
+- An [OpenAI](https://platform.openai.com) API key (or swap to Anthropic/Google in agent.py)
+- A [Webfuse](https://webfuse.com) account with a Space
+- The Automation App installed on your Space
+
 ## Quick Start
 
 ```bash
