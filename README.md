@@ -12,20 +12,15 @@ Enter a research topic. The agent plans its approach, navigates to multiple web 
 
 ## Architecture
 
-```
-Webfuse Extension (sidebar)     Agent Server (Python/LangGraph)
-+--------------------+          +----------------------------+
-|  Research topic    |--POST--->|  agent.py                  |
-|  Example chips     | /research|                            |
-|                    |          |  +-- LangGraph ReAct -----+ |
-|  Streams progress  |<--SSE---|  |  gpt-4o + tools         | |
-|  step by step      |         |  +--------+----------------+ |
-+--------------------+         |           | MCP              |
-                               |  +--------v----------------+ |
-                               |  |  Webfuse Session MCP    | |
-                               |  |  7 browser tools        | |
-                               |  +-------------------------+ |
-                               +------------------------------+
+```mermaid
+flowchart LR
+    A[User in Browser] -->|research topic| B[Webfuse Extension<br/>Sidebar UI]
+    B -->|POST /research| C[Agent Server<br/>Python / LangGraph]
+    C -->|ReAct agent| D[LLM<br/>gpt-4o]
+    D -->|tool calls| C
+    C -->|MCP| E[Webfuse Session MCP<br/>7 browser tools]
+    E -->|navigate, read,<br/>click, scroll| F[Target Website]
+    C -->|SSE stream| B
 ```
 
 The extension sends a research topic to the agent. The agent uses LangGraph's `create_react_agent` with async tool wrappers that call Webfuse MCP via Streamable HTTP.
